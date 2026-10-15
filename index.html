@@ -1,3 +1,4 @@
+```html
 <!DOCTYPE html>
 <html lang="ja">
 <head>
@@ -28,26 +29,6 @@
             color: #007bff;
         }
 
-        .progress {
-            margin: 15px 0;
-            font-size: 16px;
-        }
-
-        .progress-bar {
-            height: 10px;
-            background: #ddd;
-            border-radius: 5px;
-            overflow: hidden;
-            margin-top: 8px;
-        }
-
-        .progress-fill {
-            height: 100%;
-            width: 0%;
-            background: #28a745;
-            transition: width 0.2s;
-        }
-
         .comparison-container {
             display: flex;
             gap: 20px;
@@ -61,7 +42,7 @@
             padding: 15px;
             border-radius: 10px;
             cursor: pointer;
-            background: #fff;
+            background: white;
         }
 
         .card:hover {
@@ -92,23 +73,33 @@
             cursor: wait;
         }
 
-        .card:focus-visible {
-            outline: 3px solid #007bff;
-        }
-
         #nextPageButton {
             display: none;
             max-width: 300px;
             background: #007bff;
         }
 
-        #status {
-            min-height: 24px;
-            margin: 15px 0;
-        }
-
+        #surveyScreen,
         #completeScreen {
             display: none;
+        }
+
+        .progress-bar {
+            height: 10px;
+            background: #ddd;
+            border-radius: 5px;
+            overflow: hidden;
+            margin: 10px 0 20px;
+        }
+
+        .progress-fill {
+            height: 100%;
+            width: 0%;
+            background: #28a745;
+        }
+
+        #status {
+            min-height: 24px;
         }
 
         @media (max-width: 600px) {
@@ -127,18 +118,35 @@
 
     <h2>画像比較アンケート</h2>
 
+    <div id="setupScreen">
+        <p>アンケートに使用する画像フォルダを選択してください。</p>
+
+        <input
+            type="file"
+            id="folderInput"
+            webkitdirectory
+            directory
+            multiple
+            accept="image/*"
+        >
+
+        <p id="folderStatus">画像フォルダを選択してください。</p>
+
+        <button class="btn" id="startButton" disabled>
+            アンケートを開始
+        </button>
+    </div>
+
     <div id="surveyScreen">
 
-        <div class="progress">
-            <div id="pageText">1 / 5 ページ</div>
-            <div id="questionText">1 / 10 問</div>
+        <p id="pageText">1 / 5 ページ</p>
+        <p id="questionText">1 / 10 問</p>
 
-            <div class="progress-bar">
-                <div id="progressFill" class="progress-fill"></div>
-            </div>
+        <div class="progress-bar">
+            <div id="progressFill" class="progress-fill"></div>
         </div>
 
-        <div class="criterion-box">
+        <div class="criterion-box" id="criterionBox">
             より
             <span id="criterionText" class="criterion-text"></span>
             方を選んでクリックしてください
@@ -147,14 +155,14 @@
         <div class="comparison-container" id="comparisonContainer">
 
             <div class="card" id="leftCard">
-                <img id="imgLeft" src="" alt="比較画像A">
+                <img id="imgLeft" alt="比較画像A">
                 <button class="btn" id="leftButton" type="button">
                     こちらを選ぶ
                 </button>
             </div>
 
             <div class="card" id="rightCard">
-                <img id="imgRight" src="" alt="比較画像B">
+                <img id="imgRight" alt="比較画像B">
                 <button class="btn" id="rightButton" type="button">
                     こちらを選ぶ
                 </button>
@@ -167,7 +175,6 @@
         <button class="btn" id="nextPageButton" type="button">
             次のページへ
         </button>
-
     </div>
 
     <div id="completeScreen">
@@ -175,319 +182,297 @@
         <p>全50問の回答が終了しました。ご協力ありがとうございました。</p>
     </div>
 
-    <script>
-        // =====================================
-        // 1. 設定
-        // =====================================
+<script>
+    // ========================================
+    // 設定
+    // ========================================
 
-        const GAS_WEB_APP_URL =
-            "https://script.google.com/macros/s/AKfycbwvxzENlLRCGOT1e055Hdp_vJkuQKFnA976ps8rJzpBkk1a7xC5DlgrZTo_Yf5k8sNcDg/exec";
+    const GAS_WEB_APP_URL =
+        "https://script.google.com/macros/s/AKfycbwvxzENlLRCGOT1e055Hdp_vJkuQKFnA976ps8rJzpBkk1a7xC5DlgrZTo_Yf5k8sNcDg/exec";
 
-        // 画像フォルダのパス
-        // HTMLと同じ階層に画像があるなら "" に変更
-        const IMAGE_BASE_PATH = "images/";
+    const criteriaList = [
+        "おしゃれな",
+        "フォーマルな",
+        "スタイリッシュな",
+        "好みな"
+    ];
 
-        // 画像一覧：ここにファイル名を追加・変更するだけ
-        // 服の種類や色などの分類名は画面に表示しない
-        const imageList = [
-            "image01.jpg",
-            "image02.jpg",
-            "image03.jpg",
-            "image04.jpg",
-            "image05.jpg",
-            "image06.jpg",
-            "image07.jpg",
-            "image08.jpg",
-            "image09.jpg",
-            "image10.jpg",
-            "image11.jpg",
-            "image12.jpg",
-            "image13.jpg",
-            "image14.jpg",
-            "image15.jpg",
-            "image16.jpg"
-        ];
+    const QUESTIONS_PER_PAGE = 10;
+    const TOTAL_PAGES = 5;
 
-        // 評価基準
-        const criteriaList = [
-            "おしゃれな",
-            "フォーマルな",
-            "スタイリッシュな",
-            "好みな"
-        ];
+    // ========================================
+    // 状態
+    // ========================================
 
-        const QUESTIONS_PER_PAGE = 10;
-        const TOTAL_PAGES = 5;
+    let imageFiles = [];
+    let currentLeft = null;
+    let currentRight = null;
+    let currentCriterion = "";
 
-        // =====================================
-        // 2. 回答状態
-        // =====================================
+    let currentPage = 1;
+    let currentQuestion = 1;
+    let isSending = false;
 
-        let currentPage = 1;
-        let currentQuestion = 1;
+    let respondentId = sessionStorage.getItem(
+        "comparisonRespondentId"
+    );
 
-        let currentLeft = "";
-        let currentRight = "";
-        let currentCriterion = "";
+    if (!respondentId) {
+        respondentId =
+            "R_" + Date.now() + "_" +
+            Math.random().toString(36).slice(2, 8);
 
-        let isSending = false;
+        sessionStorage.setItem(
+            "comparisonRespondentId",
+            respondentId
+        );
+    }
 
-        // 同じ回答者IDをページ移動後も使用
-        // 同じブラウザのタブで再読み込みしてもIDを維持する
-        let respondentId = sessionStorage.getItem(
-            "comparisonRespondentId"
+    // ========================================
+    // フォルダ内の画像を読み込む
+    // ========================================
+
+    const folderInput = document.getElementById("folderInput");
+    const startButton = document.getElementById("startButton");
+
+    folderInput.addEventListener("change", function () {
+        // 前回読み込んだ画像URLを解放
+        imageFiles.forEach(item => URL.revokeObjectURL(item.url));
+
+        imageFiles = Array.from(this.files)
+            .filter(file => file.type.startsWith("image/"))
+            .map(file => ({
+                name: file.name,
+                file: file,
+                url: URL.createObjectURL(file)
+            }));
+
+        document.getElementById("folderStatus").textContent =
+            imageFiles.length + " 枚の画像を読み込みました。";
+
+        startButton.disabled = imageFiles.length < 2;
+    });
+
+    // ========================================
+    // アンケート開始
+    // ========================================
+
+    startButton.addEventListener("click", function () {
+        if (imageFiles.length < 2) {
+            alert("画像を2枚以上選択してください。");
+            return;
+        }
+
+        document.getElementById("setupScreen").style.display = "none";
+        document.getElementById("surveyScreen").style.display = "block";
+
+        nextPair();
+    });
+
+    // ========================================
+    // 画像の組み合わせ
+    // ========================================
+
+    function nextPair() {
+        const indexes = shuffle(
+            imageFiles.map((_, index) => index)
         );
 
-        if (!respondentId) {
-            respondentId =
-                "R_" + Date.now() + "_" +
-                Math.random().toString(36).slice(2, 8);
+        currentLeft = imageFiles[indexes[0]];
+        currentRight = imageFiles[indexes[1]];
 
-            sessionStorage.setItem(
-                "comparisonRespondentId",
-                respondentId
-            );
+        currentCriterion =
+            criteriaList[
+                Math.floor(Math.random() * criteriaList.length)
+            ];
+
+        document.getElementById("imgLeft").src = currentLeft.url;
+        document.getElementById("imgRight").src = currentRight.url;
+
+        document.getElementById("criterionText").textContent =
+            "「" + currentCriterion + "」";
+
+        document.getElementById("status").textContent = "";
+
+        updateProgress();
+    }
+
+    function shuffle(array) {
+        const result = [...array];
+
+        for (let i = result.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [result[i], result[j]] = [result[j], result[i]];
         }
 
-        // =====================================
-        // 3. 画像の表示
-        // =====================================
+        return result;
+    }
 
-        function shuffle(array) {
-            const result = [...array];
+    // ========================================
+    // 進捗
+    // ========================================
 
-            for (let i = result.length - 1; i > 0; i--) {
-                const j = Math.floor(Math.random() * (i + 1));
+    function updateProgress() {
+        document.getElementById("pageText").textContent =
+            currentPage + " / " + TOTAL_PAGES + " ページ";
 
-                [result[i], result[j]] =
-                    [result[j], result[i]];
-            }
+        document.getElementById("questionText").textContent =
+            currentQuestion + " / " + QUESTIONS_PER_PAGE + " 問";
 
-            return result;
-        }
+        const completed =
+            (currentPage - 1) * QUESTIONS_PER_PAGE +
+            currentQuestion - 1;
 
-        function nextPair() {
-            if (imageList.length < 2) {
-                alert("画像を2枚以上設定してください。");
-                return;
-            }
+        document.getElementById("progressFill").style.width =
+            completed / (TOTAL_PAGES * QUESTIONS_PER_PAGE) * 100 + "%";
+    }
 
-            // 毎問、画像をランダムに2枚選ぶ
-            const shuffled = shuffle(imageList);
+    function setButtonsDisabled(disabled) {
+        document.getElementById("leftButton").disabled = disabled;
+        document.getElementById("rightButton").disabled = disabled;
+    }
 
-            currentLeft = shuffled[0];
-            currentRight = shuffled[1];
+    // ========================================
+    // 回答を保存
+    // ========================================
 
-            currentCriterion =
-                criteriaList[
-                    Math.floor(Math.random() * criteriaList.length)
-                ];
+    async function selectImage(side) {
+        if (isSending) return;
 
-            document.getElementById("imgLeft").src =
-                IMAGE_BASE_PATH + currentLeft;
+        isSending = true;
+        setButtonsDisabled(true);
 
-            document.getElementById("imgRight").src =
-                IMAGE_BASE_PATH + currentRight;
+        const winner =
+            side === "left" ? currentLeft : currentRight;
 
-            document.getElementById("criterionText").textContent =
-                "「" + currentCriterion + "」";
+        const loser =
+            side === "left" ? currentRight : currentLeft;
 
-            updateProgress();
-        }
+        const payload = {
+            respondent_id: respondentId,
+            page_number: currentPage,
+            question_number: currentQuestion,
+            criterion: currentCriterion,
+            winner_img: winner.name,
+            loser_img: loser.name
+        };
 
-        // =====================================
-        // 4. 進捗表示
-        // =====================================
+        const status = document.getElementById("status");
+        status.textContent = "回答を送信しています...";
 
-        function updateProgress() {
-            document.getElementById("pageText").textContent =
-                currentPage + " / " + TOTAL_PAGES + " ページ";
+        try {
+            await fetch(GAS_WEB_APP_URL, {
+                method: "POST",
+                mode: "no-cors",
+                headers: {
+                    "Content-Type": "text/plain;charset=utf-8"
+                },
+                body: JSON.stringify(payload)
+            });
 
-            document.getElementById("questionText").textContent =
-                currentQuestion + " / " +
-                QUESTIONS_PER_PAGE + " 問";
+            status.textContent = "";
 
-            const completed =
-                (currentPage - 1) * QUESTIONS_PER_PAGE +
-                (currentQuestion - 1);
+            if (currentQuestion < QUESTIONS_PER_PAGE) {
+                currentQuestion++;
+                nextPair();
+            } else {
+                document.getElementById(
+                    "comparisonContainer"
+                ).style.display = "none";
 
-            document.getElementById("progressFill").style.width =
-                (completed / (TOTAL_PAGES * QUESTIONS_PER_PAGE) * 100)
-                + "%";
-        }
+                document.getElementById(
+                    "criterionBox"
+                ).style.display = "none";
 
-        function setButtonsDisabled(disabled) {
-            document.getElementById("leftButton").disabled = disabled;
-            document.getElementById("rightButton").disabled = disabled;
-        }
-
-        // =====================================
-        // 5. 回答の保存
-        // =====================================
-
-        async function selectImage(winnerSide) {
-            if (isSending) return;
-
-            isSending = true;
-            setButtonsDisabled(true);
-
-            const winnerImg =
-                winnerSide === "left" ? currentLeft : currentRight;
-
-            const loserImg =
-                winnerSide === "left" ? currentRight : currentLeft;
-
-            const payload = {
-                respondent_id: respondentId,
-                page_number: currentPage,
-                question_number: currentQuestion,
-                criterion: currentCriterion,
-                winner_img: winnerImg,
-                loser_img: loserImg
-            };
-
-            const status = document.getElementById("status");
-
-            status.textContent = "回答を保存しています...";
-
-            try {
-                // GASへ回答を送信
-                // no-corsではGASの応答内容・保存成功を
-                // ブラウザ側で直接確認することはできない
-                await fetch(GAS_WEB_APP_URL, {
-                    method: "POST",
-                    mode: "no-cors",
-                    headers: {
-                        "Content-Type": "text/plain;charset=utf-8"
-                    },
-                    body: JSON.stringify(payload)
-                });
-
-                // 1問分の送信処理後に次へ進む
-                status.textContent = "";
-
-                if (currentQuestion < QUESTIONS_PER_PAGE) {
-                    currentQuestion++;
-                    nextPair();
-
-                } else {
-                    // 10問終了
-                    document.getElementById(
-                        "comparisonContainer"
-                    ).style.display = "none";
-
-                    document.querySelector(
-                        ".criterion-box"
-                    ).style.display = "none";
-
-                    document.getElementById(
-                        "nextPageButton"
-                    ).style.display = "inline-block";
-
-                    status.textContent =
-                        "このページの10問が終了しました。";
-                }
-
-            } catch (error) {
-                console.error("送信エラー:", error);
+                document.getElementById(
+                    "nextPageButton"
+                ).style.display = "inline-block";
 
                 status.textContent =
-                    "送信エラーが発生しました。再度選択してください。";
-
-                // エラー時は回答を進めない
-                setButtonsDisabled(false);
-                isSending = false;
-                return;
+                    "10問終了しました。次のページへ進んでください。";
             }
 
-            isSending = false;
+        } catch (error) {
+            console.error(error);
+
+            status.textContent =
+                "送信処理でエラーが発生しました。再度選択してください。";
+
             setButtonsDisabled(false);
+            isSending = false;
+            return;
         }
 
-        // =====================================
-        // 6. 次のページ
-        // =====================================
+        setButtonsDisabled(false);
+        isSending = false;
+    }
 
-        document.getElementById("nextPageButton").addEventListener(
-            "click",
-            function () {
-                if (currentPage < TOTAL_PAGES) {
-                    currentPage++;
-                    currentQuestion = 1;
+    document.getElementById("leftButton").addEventListener(
+        "click", () => selectImage("left")
+    );
 
-                    document.getElementById(
-                        "comparisonContainer"
-                    ).style.display = "flex";
+    document.getElementById("rightButton").addEventListener(
+        "click", () => selectImage("right")
+    );
 
-                    document.querySelector(
-                        ".criterion-box"
-                    ).style.display = "block";
-
-                    document.getElementById(
-                        "nextPageButton"
-                    ).style.display = "none";
-
-                    nextPair();
-
-                } else {
-                    // 全50問終了
-                    document.getElementById(
-                        "surveyScreen"
-                    ).style.display = "none";
-
-                    document.getElementById(
-                        "completeScreen"
-                    ).style.display = "block";
-
-                    document.getElementById(
-                        "progressFill"
-                    ).style.width = "100%";
-                }
+    document.getElementById("leftCard").addEventListener(
+        "click", function (event) {
+            if (event.target.tagName !== "BUTTON") {
+                selectImage("left");
             }
-        );
-
-        // =====================================
-        // 7. イベント設定
-        // =====================================
-
-        document.getElementById("leftButton").addEventListener(
-            "click",
-            () => selectImage("left")
-        );
-
-        document.getElementById("rightButton").addEventListener(
-            "click",
-            () => selectImage("right")
-        );
-
-        document.getElementById("leftCard").addEventListener(
-            "click",
-            function (event) {
-                if (event.target.tagName !== "BUTTON") {
-                    selectImage("left");
-                }
-            }
-        );
-
-        document.getElementById("rightCard").addEventListener(
-            "click",
-            function (event) {
-                if (event.target.tagName !== "BUTTON") {
-                    selectImage("right");
-                }
-            }
-        );
-
-        // =====================================
-        // 8. 初期化
-        // =====================================
-
-        if (imageList.length < 2) {
-            document.getElementById("status").textContent =
-                "画像を2枚以上設定してください。";
-        } else {
-            nextPair();
         }
-    </script>
+    );
+
+    document.getElementById("rightCard").addEventListener(
+        "click", function (event) {
+            if (event.target.tagName !== "BUTTON") {
+                selectImage("right");
+            }
+        }
+    );
+
+    // ========================================
+    // 次のページ
+    // ========================================
+
+    document.getElementById("nextPageButton").addEventListener(
+        "click", function () {
+            if (currentPage < TOTAL_PAGES) {
+                currentPage++;
+                currentQuestion = 1;
+
+                document.getElementById(
+                    "comparisonContainer"
+                ).style.display = "flex";
+
+                document.getElementById(
+                    "criterionBox"
+                ).style.display = "block";
+
+                document.getElementById(
+                    "nextPageButton"
+                ).style.display = "none";
+
+                nextPair();
+            } else {
+                document.getElementById(
+                    "surveyScreen"
+                ).style.display = "none";
+
+                document.getElementById(
+                    "completeScreen"
+                ).style.display = "block";
+
+                document.getElementById(
+                    "progressFill"
+                ).style.width = "100%";
+
+                imageFiles.forEach(item => URL.revokeObjectURL(item.url));
+            }
+        }
+    );
+</script>
+
 </body>
 </html>
+```
